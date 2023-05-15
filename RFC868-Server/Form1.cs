@@ -16,7 +16,7 @@ namespace WinFormsApp1
         private void Form1_Load(object sender, EventArgs e)
         {
             CGMImageGenerator imageGenerator = new CGMImageGenerator();
-            imageGenerator.GenerateImageAsync().ConfigureAwait(true).GetAwaiter().GetResult();
+            imageGenerator.AcquireDataPoints();
             var bitmap = imageGenerator.GenerateBitmap();
             this.pictureBox1.Image = bitmap;
         }

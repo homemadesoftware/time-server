@@ -13,8 +13,6 @@ namespace RFC868_Server
 {
     internal class CGMImageGenerator
     {
-        static HttpClient httpClient = new HttpClient();
-        const string url = "https://toadhallcgm.azurewebsites.net/api/GetReadings";
         const int width = 250;
         const int height = 122;
         const int maxY = height - 1;
@@ -31,11 +29,9 @@ namespace RFC868_Server
 
         }
 
-        async public Task GenerateImageAsync()
+        public void AcquireDataPoints()
         {
-            var response = httpClient.GetAsync(url).GetAwaiter().GetResult();
-            var readingsSet = response.Content.ReadFromJsonAsync<CgmReadingsSet>().GetAwaiter().GetResult();
-            dataPoints = ReadingsToDataPoints(readingsSet);
+            dataPoints = DataPointsProvider.GetDataPoints(180);
         }
 
         public Bitmap GenerateBitmap()
@@ -80,12 +76,15 @@ namespace RFC868_Server
             }
             g.DrawLine(Pens.Black, 0, maxY, maxX, maxY);
 
-            Point[] points = new Point[dataPoints.Count];
-            for (int i = 0; i < dataPoints.Count; ++i)
+            if (dataPoints.Count > 0)
             {
-                points[i] = new Point(TimeOffsetToXValue(dataPoints[i].TimeOffsetMinutes), BgValueToYValue(dataPoints[i].Reading));
+                Point[] points = new Point[dataPoints.Count];
+                for (int i = 0; i < dataPoints.Count; ++i)
+                {
+                    points[i] = new Point(TimeOffsetToXValue(dataPoints[i].TimeOffsetMinutes), BgValueToYValue(dataPoints[i].Reading));
+                }
+                g.DrawLines(Pens.Black, points);
             }
-            g.DrawLines(Pens.Black, points);
         }
 
         private byte[] ToImageArrayForEPaper(Bitmap bitmap)
@@ -122,26 +121,6 @@ namespace RFC868_Server
                 }
             }
             return image;
-        }
-
-
-        private List<DataPoint> ReadingsToDataPoints(CgmReadingsSet? readings)
-        {
-            DateTime utcNow = DateTime.UtcNow;
-            List<DataPoint> dataPoints = new List<DataPoint>();
-            if (readings != null && readings.items != null)
-            {
-                foreach (var reading in readings.items)
-                {
-                    TimeSpan ts = utcNow.Subtract(reading.dateTime);
-                    DataPoint dp = new DataPoint() { TimeOffsetMinutes = ts.TotalMinutes, Reading = reading.convertedReading };
-                    if (dp.TimeOffsetMinutes <= maxTimeOffset && dp.TimeOffsetMinutes >= 0)
-                    {
-                        dataPoints.Add(dp);
-                    }
-                }
-            }
-            return dataPoints;
         }
 
 

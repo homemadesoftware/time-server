@@ -39,7 +39,7 @@ namespace RFC868_Server
             try
             {
                 CGMImageGenerator imageGenerator = new CGMImageGenerator();
-                imageGenerator.GenerateImageAsync().GetAwaiter().GetResult();
+                imageGenerator.AcquireDataPoints();
 
                 byte[] ePaperImage = imageGenerator.GenerateImageForEPaper();
                 if (!ePaperImage.SequenceEqual(previousImage))
@@ -60,7 +60,7 @@ namespace RFC868_Server
 
                 client.Send(returnedResponse.ToArray());
                     
-                Console.WriteLine($"Sent back bitmap.");
+                Console.WriteLine($"{DateTime.Now.ToLongTimeString()}. Sent back bitmap v{version}.");
             }
             catch (Exception e)
             {
