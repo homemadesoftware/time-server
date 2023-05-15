@@ -24,29 +24,34 @@ namespace RFC868_Server
         const double maxBg = bgPerPixel * maxY;
         const double pixelPerMinute = (double)maxX / 180d;
         const double maxTimeOffset = pixelPerMinute * maxY;
+        private List<DataPoint> dataPoints = new List<DataPoint>();
 
         public CGMImageGenerator()
         {
 
         }
 
-        async public Task<byte[]> GenerateImageAsync()
+        async public Task GenerateImageAsync()
         {
-            var response = await httpClient.GetAsync(url);
-            var readingsSet = await response.Content.ReadFromJsonAsync<CgmReadingsSet>();
-            List<DataPoint> dataPoints = ReadingsToDataPoints(readingsSet);
-            return GetImage(dataPoints);
+            var response = httpClient.GetAsync(url).GetAwaiter().GetResult();
+            var readingsSet = response.Content.ReadFromJsonAsync<CgmReadingsSet>().GetAwaiter().GetResult();
+            dataPoints = ReadingsToDataPoints(readingsSet);
         }
 
-        private byte[] GetImage(List<DataPoint> dataPoints)
+        public Bitmap GenerateBitmap()
         {
             System.Drawing.Bitmap bitmap = new Bitmap(width, height);
             using (var g = Graphics.FromImage(bitmap))
             {
                 DrawGraph(g, dataPoints);
             }
-            //bitmap.Save("my.bmp");
-            return ToImageArrayForEPaper(bitmap);
+            return bitmap;
+        }
+
+        
+        public byte[] GenerateImageForEPaper()
+        {
+            return ToImageArrayForEPaper(GenerateBitmap());
         }
 
         private void DrawGraph(Graphics g, List<DataPoint> dataPoints)

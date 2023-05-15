@@ -9,11 +9,15 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
+using System.Buffers.Binary;
 
 namespace RFC868_Server
 {
     internal class ImageServer
     {
+        static int version = 1;
+        static byte[] previousImage = new byte[0];
+
         public static async Task StartServerAsync(int port)
         {
             using var server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -35,7 +39,27 @@ namespace RFC868_Server
             try
             {
                 CGMImageGenerator imageGenerator = new CGMImageGenerator();
-                client.Send(imageGenerator.GenerateImageAsync().GetAwaiter().GetResult());
+                imageGenerator.GenerateImageAsync().GetAwaiter().GetResult();
+
+                byte[] ePaperImage = imageGenerator.GenerateImageForEPaper();
+                if (!ePaperImage.SequenceEqual(previousImage))
+                {
+                    File.WriteAllBytes("prev.bin", previousImage);
+                    File.WriteAllBytes("paper.bin", ePaperImage);
+                    previousImage = ePaperImage;
+                    ++version;
+                }
+
+                List<byte> returnedResponse = new List<byte>();
+
+                Span<byte> bytesSpan = new Span<byte>(new byte[4]);
+                BinaryPrimitives.WriteInt32LittleEndian(bytesSpan, version);
+                returnedResponse.AddRange(bytesSpan.ToArray());
+
+                returnedResponse.AddRange(ePaperImage);
+
+                client.Send(returnedResponse.ToArray());
+                    
                 Console.WriteLine($"Sent back bitmap.");
             }
             catch (Exception e)
